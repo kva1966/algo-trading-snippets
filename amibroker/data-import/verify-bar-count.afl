@@ -3,7 +3,7 @@ Run as an exploration to do a basic bar count for one or more
 symbols. Compare this against the expected total recorded
 imports as a sanity check.
 
-Code provided by @fxshrat:
+Code provided by @fxshrat on the AmiBroker Forums:
 
 https://forum.amibroker.com/t/emulating-amiquote-refresh-database-for-custom-datasource/11264/17?u=ka66
 

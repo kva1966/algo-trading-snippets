@@ -4,6 +4,8 @@
  * https://www.amibroker.com/guide/d_ascii.html
  * https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/filesystemobject-object
  * https://docs.microsoft.com/en-us/previous-versions//98591fh7%28v%3dvs.85%29
+ * 
+ * AmiBroker Forums, inputs from users: @beppe and @codejunkie
  * https://forum.amibroker.com/t/cant-import-data-from-ascii-file-by-using-js-ole/4416
  */
 var HOME = 'C:\\Users\\DonJuan'
