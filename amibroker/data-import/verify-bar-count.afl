@@ -1,0 +1,19 @@
+/*
+Run as an exploration to do a basic bar count for one or more 
+symbols. Compare this against the expected total recorded
+imports as a sanity check.
+
+Code provided by @fxshrat:
+
+https://forum.amibroker.com/t/emulating-amiquote-refresh-database-for-custom-datasource/11264/17?u=ka66
+
+IMPORTANT: Time manipulation is done in the Analysis rather than the
+script. In particular: set the correct periodicity in the Analysis where 
+this is run from, e.g. for 1 minute bar counts, set it to that, 
+otherwise, counts the default (usually) daily bars only.
+ */
+SetBarsRequired(sbrAll);
+AddSummaryRows(1, 1);
+Filter = Status("lastbarinrange");
+AddTextColumn(Interval(2), "Interval", 1);
+AddColumn(Cum(1), "#Bars", 1);
