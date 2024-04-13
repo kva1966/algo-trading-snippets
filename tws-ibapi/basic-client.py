@@ -14,39 +14,26 @@
 # > %rld
 ###
 
-import threading
-import logging
-from dataclasses import dataclass
+import sys
+sys.path.append('./src')
+import time
 
-from ibapi.client import EClient
+from brokerplatform.ib import init_logging
+from brokerplatform.ib.app import TwsApp
+init_logging()
+
+import logging
+
 from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract, ContractDetails
 
-IBGATEWAY_LIVE_TRADING_PORT = 4001
-IBGATEWAY_PAPER_TRADING_PORT = 4002
-TWS_LIVE_TRADING_PORT = 7496
-TWS_PAPER_TRADING_PORT = 7497
-IBAPI_PORT = IBGATEWAY_PAPER_TRADING_PORT
-IBAPI_HOST = "127.0.0.1"
-
-def init_logging(level=logging.INFO):
-  conf = {
-    'level': level,
-    'format': '[%(asctime)s] [%(threadName)s(%(thread)d)] [%(levelname)s] %(name)s:%(lineno)d %(funcName)s(): %(message)s'
-  }
-  logging.basicConfig(**conf)
-
-init_logging()
 
 log = logging.getLogger(__name__)
 
-# Max request id (use a practical value on 32 bit system), before we reset.
-MAX_REQUEST_ID = 2**31 - 1
-
-class TwsMessageHandler(EClient, EWrapper):
-    def __init__(self):
-        EClient.__init__(self, self)
-
+class AppMessageHandler(EWrapper):
+    """
+    Overrides handlers for messages we are interested in.
+    """
     def error(self, reqId, errorCode, errorString, advancedOrderRejectJson=""):
         '''Overriden method'''
         errPrefix = 'Info' if errorCode == -1 else 'Error'
@@ -57,65 +44,17 @@ class TwsMessageHandler(EClient, EWrapper):
         log.info(f"[ContractDetails] reqId={reqId}|contractDetails={contractDetails}")
 
 
-@dataclass
-class TwsApp:
-    def __init__(self):
-        log.info("Initialising TwsApp")
-        self._requestId = 0
-        self._running = False
-        self._messageHandler = None
 
-    def start(self):
-        log.info("Starting TwsApp")
-        if not self._messageHandler:
-            self._messageHandler = TwsMessageHandler()
-        self._connect()
-        self._runInThread()
-
-    def stop(self):
-        log.info("Stopping TwsApp")
-        self._disconnect() # Stops the message handler's run() loop and thread
-        self._running = False
-
-    def reqContractDetails(self, c: Contract):
-        self._messageHandler.reqContractDetails(self._genRequestId(), c)
-
-    def _genRequestId(self) -> int:
-        self._requestId += 1
-        if self._requestId >= MAX_REQUEST_ID:
-            self._requestId = 1
-        return self._requestId
-
-    def _connect(self):
-        log.info(f"Connecting to TWS[{IBAPI_HOST}:{IBAPI_PORT}]")
-        if self._messageHandler.isConnected():
-            log.info("Already connected")
-            return
-        self._messageHandler.connect(IBAPI_HOST, IBAPI_PORT, clientId=0)
-
-    def _disconnect(self):
-        log.info("Disconnecting from TWS")
-        if not self._messageHandler.isConnected():
-            log.info("Not connected, nothing to do")
-            return
-        self._messageHandler.disconnect()
-
-    def _runInThread(self):
-        if self._running:
-            log.info("Application is already running")
-            return
-        log.info("Running application")
-        def _run():
-            self._messageHandler.run()
-            # A disconnect() call will stop the message handler's run() loop
-            log.info("MessageHandler stopped, exiting thread")
-        threading.Thread(target=_run).start()
-        self._running = True
-
-app = TwsApp()
+app = TwsApp(message_handler=AppMessageHandler())
 app.start()
 
+# https://ibkrcampus.com/ibkr-api-page/twsapi-doc/#contracts
 c = Contract()
 c.symbol = "MCL" # Mini Futures Crude Oil
 c.secType = "CONTFUT" # Continuous Futures, for historical data access
 c.exchange = "NYMEX"
+app.client.reqContractDetails(app.nextId, c)
+
+time.sleep(2) # Wait to get async response before stopping
+app.stop()
+# app.start()
