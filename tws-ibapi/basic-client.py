@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 ##
-# https://interactivebrokers.github.io/tws-api/index.html
+# Old page: https://interactivebrokers.github.io/tws-api/index.html
+# New page: https://ibkrcampus.com/ibkr-api-page/twsapi-doc/
 ##
 
 ###
@@ -21,8 +22,12 @@ from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract, ContractDetails
 
-TWS_HOST = "127.0.0.1"
-TWS_PORT = 7497
+IBGATEWAY_LIVE_TRADING_PORT = 4001
+IBGATEWAY_PAPER_TRADING_PORT = 4002
+TWS_LIVE_TRADING_PORT = 7496
+TWS_PAPER_TRADING_PORT = 7497
+IBAPI_PORT = IBGATEWAY_PAPER_TRADING_PORT
+IBAPI_HOST = "127.0.0.1"
 
 def init_logging(level=logging.INFO):
   conf = {
@@ -41,9 +46,6 @@ MAX_REQUEST_ID = 2**31 - 1
 class TwsMessageHandler(EClient, EWrapper):
     def __init__(self):
         EClient.__init__(self, self)
-
-    def _connect(self):
-        self.connect(TWS_HOST, TWS_PORT, clientId=0)
 
     def error(self, reqId, errorCode, errorString, advancedOrderRejectJson=""):
         '''Overriden method'''
@@ -85,11 +87,11 @@ class TwsApp:
         return self._requestId
 
     def _connect(self):
-        log.info("Connecting to TWS")
+        log.info(f"Connecting to TWS[{IBAPI_HOST}:{IBAPI_PORT}]")
         if self._messageHandler.isConnected():
             log.info("Already connected")
             return
-        self._messageHandler.connect(TWS_HOST, TWS_PORT, clientId=0)
+        self._messageHandler.connect(IBAPI_HOST, IBAPI_PORT, clientId=0)
 
     def _disconnect(self):
         log.info("Disconnecting from TWS")
