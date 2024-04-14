@@ -83,10 +83,19 @@ df['macd'] = macd
 df['signal'] = signal
 
 #print(df[df['peaks'] == True])
-print(df[['high', 'peaks']])
-print(df[['low', 'valleys']])
+# print(df[['high', 'peaks']])
+# print(df[['low', 'valleys']])
 
 
-plot_gapless(df, ['close'])
-plt.show()
+# plot_gapless(df, ['close'])
+# plt.show()
+
+# For the MACD, we need to find peaks only on the positive zone
+df['macd_peaks'] = find_peaks(macd.where(macd > 0))
+# For the MACD, we need to find valleys only on the negative zone
+df['macd_valleys'] = find_valleys(macd.where(macd < 0))
+
+print(df[['macd', 'macd_peaks', 'macd_valleys']])
+
+
 
