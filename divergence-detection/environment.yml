@@ -1,0 +1,43 @@
+########
+# https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file
+# Create: conda env create -f environment.yml
+# Activate: conda activate divergence-detection
+# Update: conda env update --file environment.yml  --prune
+# Update no prune (handy for if having too many conflicts): conda env update --file environment.yml
+# List: conda env list
+# Deactivate: conda deactivate
+# Remove: conda env remove -n divergence-detection
+#
+# Tips: With a new Python upgrade, we might want to incrementally add packages
+# * Deactivate and Remove env
+# * Comment out most packages, just enable Python
+# * Create the env
+# * On success, start incrementally uncommenting packages, run the Update command,
+#   (probably without pruning, since this is created from scratch), uncomment more,
+#   rinse and repeat.
+# * Comment out, and slowly uncomment with each new Conda update command above.
+########
+
+name: divergence-detection
+
+channels:
+  - conda-forge # for many packages like gtk3, watchdog, etc. not found in the main conda channel
+
+dependencies:
+  # Python Base
+  - python >= 3.10
+
+  # Core Datasci/Trading Dependencies
+  - matplotlib
+  - numpy
+  - pandas
+  - plotly
+  # - pytables
+  # Utils
+  - pytz
+  - requests
+
+  # Dev Dependencies
+  - ipython
+  - pip
+
