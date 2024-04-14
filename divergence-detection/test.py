@@ -47,6 +47,33 @@ def find_valleys(ser: pd.Series):
     # shift result forward so that the valley is marked on the centre bar
     return valleys.shift(-1)
 
+def mark_divergence(df: pd.DataFrame,
+                    peak_col_name: str,
+                    valley_col_name: str,
+                    high_price_col_name: str,
+                    low_price_col_name: str) -> tuple[pd.Series, pd.Series]:
+    '''
+    Returns a tuple of two series, the first series is a bullish divergence
+    series, the second series is a bearish divergence series. They will contain
+    NaN values where there is no divergence.
+    '''
+    peak_idx = []
+    valley_idx = []
+
+    for index, row in df.iterrows():
+        if row[peak_col_name] == True:
+            peak_idx.append(index)
+
+        if row[valley_col_name] == True:
+            valley_idx.append(index)
+
+    # Init with NaN values
+    bullish_divergence = pd.Series(index=df.index, data=np.nan)
+    bearish_divergence = pd.Series(index=df.index, data=np.nan)
+
+    # TODO ...
+
+
 
 def lbr310(ser: pd.Series) -> (pd.Series, pd.Series):
     fast_ser = ser.rolling(window=3).mean()
