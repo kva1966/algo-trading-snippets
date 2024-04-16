@@ -48,31 +48,97 @@ def find_valleys(ser: pd.Series):
     return valleys.shift(-1)
 
 def mark_divergence(df: pd.DataFrame,
-                    peak_col_name: str,
-                    valley_col_name: str,
+                    series_peak_col_name: str,
+                    series_valley_col_name: str,
                     high_price_col_name: str,
                     low_price_col_name: str) -> tuple[pd.Series, pd.Series]:
     '''
     Returns a tuple of two series, the first series is a bullish divergence
     series, the second series is a bearish divergence series. They will contain
     NaN values where there is no divergence.
+
+    Supply a dataframe containing the oscillator series, identified by the names
+    series_peak_col_name and series_valley_col_name, and the high and low price
+    series identified by the names high_price_col_name and low_price_col_name.
+
+    The logic is based on: https://academy.ftmo.com/lesson/divergence-trading/
+    except we don't worry about having a pivot high/low on the prices series, only
+    on the oscillator series. And only 3 adjacent bars are taken into account
+    on the oscillator. On the price series we just want the relative high/low
+    prices to follow the rules of the divergence.
+
+    Returns a dict with 4 keys, each has a value of a pandas boolean series where
+    true values at the dataframe indexes are where a divergence is detected.
+
+    The keys are:
+
+    * bullish_divergence
+    * bearish_divergence
+    * hidden_bullish_divergence
+    * hidden_bearish_divergence
     '''
     peak_idx = []
     valley_idx = []
 
     for index, row in df.iterrows():
-        if row[peak_col_name] == True:
+        if row[series_peak_col_name] == True:
             peak_idx.append(index)
 
-        if row[valley_col_name] == True:
+        if row[series_valley_col_name] == True:
             valley_idx.append(index)
 
-    # Init with NaN values
-    bullish_divergence = pd.Series(index=df.index, data=np.nan)
-    bearish_divergence = pd.Series(index=df.index, data=np.nan)
+    # Init with False values
+    bullish_divergence = pd.Series(index=df.index, data=False)
+    bearish_divergence = pd.Series(index=df.index, data=False)
+    hidden_bullish_divergence = pd.Series(index=df.index, data=False)
+    hidden_bearish_divergence = pd.Series(index=df.index, data=False)
+
+    # The logic we will use is not terribly precise, in particular we don't care
+    # that the price is also at a peak or valley. Just that there is a divergence.
+    # Further visual inspection or analysis is always required for divergence
+    # trading.
+    #
+    # A bullish divergence is when:
+    #
+    # * We take two consecutive/adjacent valleys in the oscillator series.
+    # * The second valley is higher than the first valley.
+    # * But the prices across the indexes registered a lower low in the second valley.
+    #
+    # Meaning the momentum of the new price low is weaker than the previous low.
+    #
+    # A bearish divergence is when:
+    #
+    # * We take two consecutive/adjacent peaks in the oscillator series.
+    # * The second peak is lower than the first peak.
+    # * But the prices across the indexes registered a higher high in the second peak.
+    #
+    # Meaning the momentum of the new price high is weaker than the previous high.
+    #
+    # A bullish hidden divergence is when:
+    #
+    # * We take two consecutive/adjacent valleys in the oscillator series.
+    # * The second valley is lower than the first valley.
+    # * But the prices across the indexes registered a higher low in the second valley.
+    #
+    # This is counterintuitive, but it almost means that we have exhausted the down
+    # move's momentum and a reversal to the upside is likely.
+    #
+    # A bearish hidden divergence is when:
+    #
+    # * We take two consecutive/adjacent peaks in the oscillator series.
+    # * The second peak is higher than the first peak.
+    # * But the prices across the indexes registered a lower high in the second peak.
+    #
+    # This is counterintuitive, but it almost means that we have exhausted the up
+    # move's momentum and a reversal to the downside is likely.
 
     # TODO ...
-
+    return {
+        'bullish_divergence': bullish_divergence,
+        'bearish_divergence': bearish_divergence,
+        'hidden_bullish_divergence': hidden_bullish_divergence,
+        'hidden_bearish_divergence': hidden_bearish_divergence,
+    }
 
 
 def lbr310(ser: pd.Series) -> (pd.Series, pd.Series):
