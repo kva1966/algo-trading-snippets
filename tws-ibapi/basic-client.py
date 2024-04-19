@@ -16,8 +16,9 @@
 
 import sys
 sys.path.append('./src')
-import time
+from collections import defaultdict
 import datetime as dt
+import time
 
 from brokerplatform.ib import init_logging
 from brokerplatform.ib.app import TwsApp
@@ -29,7 +30,9 @@ from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract, ContractDetails
 from ibapi.common import BarData
 
+import pandas as pd
 import pytz
+
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +40,13 @@ class AppMessageHandler(EWrapper):
     """
     Overrides handlers for messages we are interested in.
     """
+
+    def __init__(self):
+        EWrapper.__init__(self)
+        self.hist_data = None
+        self.tmp_hist_data_idx = []
+        self.tmp_hist_data_dict = defaultdict(list)
+
     def error(self, reqId, errorCode, errorString, advancedOrderRejectJson=""):
         '''Overriden method'''
         errPrefix = 'Info' if errorCode == -1 else 'Error'
@@ -63,12 +73,34 @@ class AppMessageHandler(EWrapper):
         hasGaps  -indicates if the data has gaps or not."""
         log.info(f"[HistoricalData] reqId={reqId}|bar={bar}")
 
+        local_tz = pytz.timezone('Asia/Jakarta')
+        # Incoming timestamp is in UTC
+        bar_dt = dt.datetime.fromtimestamp(float(bar.date), tz=dt.UTC)
+        # Now convert to local timezone
+        bar_dt = bar_dt.astimezone(local_tz)
+        # then convert to pandas Timestamp
+        pd_ts = pd.Timestamp(bar_dt)
+        self.tmp_hist_data_idx.append(pd_ts)
+        row_dict = self.tmp_hist_data_dict
+        row_dict['open'].append(bar.open)
+        row_dict['high'].append(bar.high)
+        row_dict['low'].append(bar.low)
+        row_dict['close'].append(bar.close)
+        row_dict['volume'].append(bar.volume)
+
+
     def historicalDataEnd(self, reqId: int, start: str, end: str):
         """Marks the ending of the historical bars reception."""
         log.info(f"[HistoricalDataEnd] reqId={reqId}|start={start}|end={end}")
+        self.hist_data = pd.DataFrame(self.tmp_hist_data_dict, index=self.tmp_hist_data_idx)
+        # reset holding vars
+        self.tmp_hist_data_dict = defaultdict(list)
+        self.tmp_hist_data_idx = []
 
 
-app = TwsApp(message_handler=AppMessageHandler())
+
+handler = AppMessageHandler()
+app = TwsApp(message_handler=handler)
 app.start()
 
 # https://ibkrcampus.com/ibkr-api-page/twsapi-doc/#contracts
@@ -89,7 +121,10 @@ app.client.reqContractDetails(app.nextId, c)
 # yyyymmddd-hh:mm:ss time is in UTC. Note that there is a dash between the date and time in
 # UTC notation.|advOrderRejectJson=
 
-utc_fmt = "%Y%m%d %H:%M:%S"
+# Specify our date time in UTC, using the following format.
+# So when we get it back, we will get a UTC timestamp, which we convert back to
+# our local time.
+utc_fmt = "%Y%m%d-%H:%M:%S"
 
 app.client.reqHistoricalData(
     reqId=app.nextId,
@@ -106,6 +141,15 @@ app.client.reqHistoricalData(
     chartOptions=[], # internal use, just specify empty list
 )
 
-#time.sleep(2) # Wait to get async response before stopping
+time.sleep(10) # Wait to get async response
+df = handler.hist_data
 #app.stop()
 # app.start()
+
+###
+# [2024-04-19 14:41:57,697] [Thread-2 (_run)(6140243968)] [INFO] __main__:54 error():
+# [Error] reqId=2|code=2174|msg=Warning: You submitted request with date-time attributes
+# without explicit time zone. Please switch to use yyyymmdd-hh:mm:ss in UTC
+# or use instrument time zone, like US/Eastern. Implied time zone functionality
+# will be removed in the next API release|advOrderRejectJson=
+###
